@@ -10,14 +10,13 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      base: './', // Ensures assets load correctly on GitHub Pages
+      base: '/FitBunny4/', // Explicitly set to repo name for GitHub Pages
       server: {
         port: 3000,
         host: '0.0.0.0',
       },
       plugins: [react()],
       define: {
-        // Default to empty string if no key is provided, preventing build errors
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ""),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || "")
       },
