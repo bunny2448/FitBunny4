@@ -1,3 +1,4 @@
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
@@ -27,6 +28,7 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         outDir: 'dist',
+        emptyOutDir: true,
       }
     };
 });
