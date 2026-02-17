@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      base: '/FitBunny4/', // Explicitly set to repo name for GitHub Pages
+      base: '/FitBunny4/', // Matches your repo name https://bunny2448.github.io/FitBunny4/
       server: {
         port: 3000,
         host: '0.0.0.0',
