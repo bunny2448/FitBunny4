@@ -25,6 +25,7 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [showVideoOverlay, setShowVideoOverlay] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null);
+  const [exerciseThumbnails, setExerciseThumbnails] = useState<Record<string, string>>({});
   
   // Exercise-specific rest timers
   const [restTimers, setRestTimers] = useState<Record<number, number>>({});
@@ -63,6 +64,36 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({
 
   const currentEntry = currentExerciseIndex !== null ? template.exercises[currentExerciseIndex] : null;
   const currentExercise = currentEntry ? library.find(e => e.id === currentEntry.exerciseId) : null;
+
+  useEffect(() => {
+    let isCancelled = false;
+    const createdUrls: string[] = [];
+
+    const loadThumbnails = async () => {
+      const uniqueExerciseIds = Array.from(new Set(template.exercises.map(ex => ex.exerciseId)));
+      const nextThumbs: Record<string, string> = {};
+
+      for (const exerciseId of uniqueExerciseIds) {
+        const blob = await videoDb.getVideo(exerciseId);
+        if (!blob) continue;
+
+        const url = URL.createObjectURL(blob);
+        createdUrls.push(url);
+        nextThumbs[exerciseId] = url;
+      }
+
+      if (!isCancelled) {
+        setExerciseThumbnails(nextThumbs);
+      }
+    };
+
+    loadThumbnails();
+
+    return () => {
+      isCancelled = true;
+      createdUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [template.exercises]);
 
   // Stable Video Load
   const videoLoadedId = useRef<string | null>(null);
@@ -181,7 +212,19 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({
                     {isFinished ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
+                      {exerciseThumbnails[entry.exerciseId] && (
+                        <video
+                          src={exerciseThumbnails[entry.exerciseId]}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          onLoadedData={(e) => {
+                            e.currentTarget.currentTime = 0.01;
+                          }}
+                          className="w-12 h-12 rounded-xl object-cover border border-[#EEEEEE] shrink-0"
+                        />
+                      )}
                       <h4 className="font-bold text-[#1A1A1A]">{entry.exerciseName}</h4>
                       {entry.isSuperset && <span className="text-[8px] font-black bg-[#FF4500]/10 text-[#FF4500] px-1.5 py-0.5 rounded uppercase tracking-tighter">Super</span>}
                     </div>
@@ -253,12 +296,34 @@ export const ActiveWorkoutScreen: React.FC<ActiveWorkoutScreenProps> = ({
           <h2 className="text-3xl font-black tracking-tighter text-[#1A1A1A] mb-3 leading-tight">{currentEntry!.exerciseName}</h2>
           <p className="text-[#888888] text-sm font-medium leading-relaxed">{currentExercise?.description || "No instructions."}</p>
         </div>
-        <button 
-          onClick={() => setShowVideoOverlay(true)}
-          className="w-12 h-12 bg-[#FF4500] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#FF4500]/20 shrink-0 mt-2"
-        >
-          <Video className="w-6 h-6" />
-        </button>
+        {currentExercise && exerciseThumbnails[currentExercise.id] ? (
+          <button
+            onClick={() => setShowVideoOverlay(true)}
+            className="relative w-16 h-16 rounded-2xl overflow-hidden border border-[#EEEEEE] shrink-0 mt-2"
+            aria-label="Open exercise video"
+          >
+            <video
+              src={exerciseThumbnails[currentExercise.id]}
+              muted
+              playsInline
+              preload="metadata"
+              onLoadedData={(e) => {
+                e.currentTarget.currentTime = 0.01;
+              }}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+              <Play className="w-5 h-5 text-white" />
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowVideoOverlay(true)}
+            className="w-12 h-12 bg-[#FF4500] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#FF4500]/20 shrink-0 mt-2"
+          >
+            <Video className="w-6 h-6" />
+          </button>
+        )}
       </div>
 
       {showVideoOverlay && (
