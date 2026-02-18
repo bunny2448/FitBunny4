@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-import { Trash2, Rabbit, Plus } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { ScheduledWorkout, WorkoutTemplate } from '../types';
 
 interface CalendarViewProps {
@@ -9,10 +8,20 @@ interface CalendarViewProps {
   onOpenWorkout: (template: WorkoutTemplate) => void;
   onDeleteSchedule: (id: string) => void;
   onImportRequest: () => void;
+  onAssignWorkout: (date: string, templateId: string) => void;
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ schedule, templates, onDeleteSchedule, onOpenWorkout, onImportRequest }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({
+  schedule,
+  templates,
+  onDeleteSchedule,
+  onOpenWorkout,
+  onImportRequest,
+  onAssignWorkout,
+}) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isManualAssignOpen, setIsManualAssignOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   const weekDays = useMemo(() => {
     const dates = [];
@@ -24,19 +33,26 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ schedule, templates,
     return dates;
   }, []);
 
-  const assignedWorkouts = schedule.filter(s => s.date === selectedDate);
-  const scheduledDates = new Set(schedule.map(s => s.date));
+  const assignedWorkouts = schedule.filter((s) => s.date === selectedDate);
+  const scheduledDates = new Set(schedule.map((s) => s.date));
+
+  const handleManualAssign = () => {
+    if (!selectedTemplateId) return;
+    onAssignWorkout(selectedDate, selectedTemplateId);
+    setSelectedTemplateId('');
+    setIsManualAssignOpen(false);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center gap-3 overflow-x-auto no-scrollbar pb-4 -mx-2 px-2">
-        {weekDays.map(date => {
+        {weekDays.map((date) => {
           const d = new Date(date);
           const isSelected = selectedDate === date;
           const hasWorkout = scheduledDates.has(date);
-          
+
           return (
-            <button 
+            <button
               key={date}
               onClick={() => setSelectedDate(date)}
               className={`
@@ -48,27 +64,57 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ schedule, templates,
                 {d.toLocaleDateString(undefined, { weekday: 'short' }).charAt(0)}
               </span>
               <span className="text-xl font-black leading-none">{d.getDate()}</span>
-              {hasWorkout && (
-                <div className={`mt-2 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#FF4500]'}`} />
-              )}
+              {hasWorkout && <div className={`mt-2 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#FF4500]'}`} />}
             </button>
           );
         })}
       </div>
 
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-3">
           <h3 className="text-[11px] font-black text-[#AAAAAA] uppercase tracking-[0.2em]">
             {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
           </h3>
-          <button 
-            onClick={onImportRequest}
-            className="text-[10px] font-black text-[#FF4500] uppercase tracking-widest border border-[#FF4500]/10 px-4 py-1.5 rounded-full hover:bg-[#FF4500]/5 transition-all"
-          >
-            Assign Plans
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsManualAssignOpen((prev) => !prev)}
+              className="text-[10px] font-black text-[#4A4A4A] uppercase tracking-widest border border-[#EEEEEE] px-4 py-1.5 rounded-full hover:bg-[#F9F9F9] transition-all"
+            >
+              Assign Workout
+            </button>
+            <button
+              onClick={onImportRequest}
+              className="text-[10px] font-black text-[#FF4500] uppercase tracking-widest border border-[#FF4500]/10 px-4 py-1.5 rounded-full hover:bg-[#FF4500]/5 transition-all"
+            >
+              Assign Plans
+            </button>
+          </div>
         </div>
-        
+
+        {isManualAssignOpen && (
+          <div className="bg-white border border-[#EEEEEE] rounded-[1.5rem] p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+            <select
+              value={selectedTemplateId}
+              onChange={(e) => setSelectedTemplateId(e.target.value)}
+              className="flex-1 px-4 py-3 rounded-xl border border-[#EEEEEE] text-sm font-semibold text-[#4A4A4A] bg-white outline-none focus:border-[#FF4500]"
+            >
+              <option value="">Choose a workout routine</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleManualAssign}
+              disabled={!selectedTemplateId || templates.length === 0}
+              className="px-5 py-3 rounded-xl bg-[#FF4500] text-white text-sm font-black disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Add To Date
+            </button>
+          </div>
+        )}
+
         {assignedWorkouts.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center bg-white border border-[#EEEEEE] rounded-[2rem]">
             <div className="w-12 h-12 bg-[#F9F9F9] rounded-2xl flex items-center justify-center text-[#DDDDDD] mb-4">
@@ -78,8 +124,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ schedule, templates,
           </div>
         ) : (
           <div className="grid gap-3">
-            {assignedWorkouts.map(sw => {
-              const template = templates.find(t => t.id === sw.templateId);
+            {assignedWorkouts.map((sw) => {
+              const template = templates.find((t) => t.id === sw.templateId);
               if (!template) return null;
               return (
                 <div key={sw.id} className="bg-white border border-[#EEEEEE] rounded-[1.5rem] p-6 flex justify-between items-center group transition-all hover:border-[#FF4500]/20">
