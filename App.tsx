@@ -105,6 +105,16 @@ const App: React.FC = () => {
     showNotification('Schedule cleared.', 'success');
   };
 
+  const handleManualAssignSchedule = (date: string, templateId: string) => {
+    const entry: ScheduledWorkout = {
+      id: crypto.randomUUID(),
+      date,
+      templateId
+    };
+
+    handleAddSchedule(entry);
+  };
+
   const handleWorkoutComplete = (log: WorkoutLog) => {
     setWorkoutLogs(prev => [...prev, log]);
     setActiveWorkout(null);
@@ -196,6 +206,7 @@ const App: React.FC = () => {
             onOpenWorkout={(t) => setActiveWorkout(t)} 
             onDeleteSchedule={handleDeleteSchedule}
             onImportRequest={() => setIsTier3ImportOpen(true)}
+            onAssignWorkout={handleManualAssignSchedule}
           />
         )}
 
